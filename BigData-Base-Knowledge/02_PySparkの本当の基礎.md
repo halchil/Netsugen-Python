@@ -62,12 +62,68 @@ pip install pyspark
 python -c "import pyspark; print('PySpark installed successfully!')"
 ```
 
-### 2.2 最初の一歩：SparkSessionを作成
+### 2.2 SparkSessionとは何か？
+
+SparkSessionは、PySparkアプリケーションの**エントリーポイント**（入り口）です。すべてのSpark機能にアクセスするための統一されたインターフェースを提供します。
+
+#### 2.2.1 SparkSessionの役割
+
+```python
+# SparkSessionの基本構造
+SparkSession
+├── SparkContext: 分散処理の基本機能
+├── SQLContext: SQLクエリの実行
+├── HiveContext: Hiveテーブルの操作
+└── StreamingContext: ストリーミング処理
+```
+
+**なぜSparkSessionが必要なのか？**
+
+1. **統一されたインターフェース**
+   ```python
+   # 従来は複数のコンテキストが必要だった
+   from pyspark import SparkContext
+   from pyspark.sql import SQLContext
+   from pyspark.sql import HiveContext
+   
+   sc = SparkContext()
+   sqlContext = SQLContext(sc)
+   hiveContext = HiveContext(sc)
+   
+   # SparkSessionなら一つで済む
+   from pyspark.sql import SparkSession
+   spark = SparkSession.builder.getOrCreate()
+   ```
+
+2. **設定の一元管理**
+   ```python
+   # アプリケーション全体の設定を一箇所で管理
+   spark = SparkSession.builder \
+       .appName("MyApp") \
+       .config("spark.driver.memory", "2g") \
+       .config("spark.executor.memory", "4g") \
+       .getOrCreate()
+   ```
+
+3. **リソースの効率的な管理**
+   ```python
+   # セッションの開始
+   spark = SparkSession.builder.getOrCreate()
+   
+   # 処理実行
+   df = spark.read.csv('data.csv')
+   result = df.groupBy('category').count()
+   
+   # セッションの終了（リソース解放）
+   spark.stop()
+   ```
+
+#### 2.2.2 SparkSessionの作成方法
 
 ```python
 from pyspark.sql import SparkSession
 
-# SparkSessionの作成（最も基本的な方法）
+# 最も基本的な作成方法
 spark = SparkSession.builder \
     .appName("MyFirstPySpark") \
     .getOrCreate()
@@ -75,6 +131,56 @@ spark = SparkSession.builder \
 # バージョン確認
 print("Spark version:", spark.version)
 print("SparkSession created successfully!")
+
+# セッションを閉じる
+spark.stop()
+```
+
+**各設定項目の説明：**
+
+- `.builder`: SparkSessionのビルダーを開始
+- `.appName("MyFirstPySpark")`: アプリケーション名を設定（WebUIで表示される）
+- `.getOrCreate()`: 既存のセッションがあれば取得、なければ新規作成
+
+#### 2.2.3 SparkSessionの詳細設定
+
+```python
+from pyspark.sql import SparkSession
+
+# より詳細な設定
+spark = SparkSession.builder \
+    .appName("DetailedConfigApp") \
+    .master("local[*]") \  # ローカルモードで全コア使用
+    .config("spark.driver.memory", "2g") \  # ドライバーメモリ
+    .config("spark.executor.memory", "4g") \  # エグゼキュータメモリ
+    .config("spark.sql.adaptive.enabled", "true") \  # 適応的クエリ実行
+    .getOrCreate()
+
+print("詳細設定でSparkSessionを作成しました")
+print("アプリケーション名:", spark.conf.get("spark.app.name"))
+print("マスターモード:", spark.conf.get("spark.master"))
+```
+
+#### 2.2.4 SparkSessionの状態確認
+
+```python
+from pyspark.sql import SparkSession
+
+# SparkSessionを作成
+spark = SparkSession.builder \
+    .appName("StatusCheckApp") \
+    .getOrCreate()
+
+# セッション情報の確認
+print("=== SparkSession情報 ===")
+print("アプリケーション名:", spark.conf.get("spark.app.name"))
+print("Sparkバージョン:", spark.version)
+print("利用可能なコア数:", spark.sparkContext.defaultParallelism)
+
+# リソース情報の確認
+print("\n=== リソース情報 ===")
+print("ドライバーメモリ:", spark.conf.get("spark.driver.memory"))
+print("エグゼキュータメモリ:", spark.conf.get("spark.executor.memory"))
 
 # セッションを閉じる
 spark.stop()
